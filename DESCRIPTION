@@ -1,0 +1,45 @@
+Package: LARItools
+Title: Lactylation-Associated Risk Index (LARI) for Pan-Cancer
+Version: 0.1.0
+Authors@R:
+    person("Zhihao", "Bo", , "bozhihao@tmu.edu.cn", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0005-6298-1953"))
+Description: Computes the Lactylation-Associated Risk Index (LARI), a continuous
+    prognostic metric derived from a pre-trained multi-omics Random Survival Forest
+    (RSF) classifier integrating mRNA, lncRNA, and miRNA expression profiles. LARI
+    quantifies the transcriptional activity of the lactylation-associated
+    stromal-immune program at the individual sample level, with higher scores
+    reflecting greater enrichment of extracellular matrix remodeling, immune
+    suppression, and lactylation writer activity characteristic of the CS2 molecular
+    subtype. The index has been validated as an independent prognostic indicator
+    across eight external cohorts spanning six cancer types. Also provides
+    LacCore Signature Scores via ssGSEA (GSVA >= 1.48 new API) and TIDE
+    (Tumour Immune Dysfunction and Exclusion) scores via the Python tidepy
+    package. Accepts gene expression matrices from RNA-seq or microarray
+    platforms and returns per-sample scores suitable for survival analysis,
+    risk stratification, and downstream multi-omics integration.
+License: GPL-2 | GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+biocViews: GeneExpression, Transcriptomics, GeneSetEnrichment, Survival
+Imports:
+    randomForestSRC (>= 3.2.0),
+    GSVA (>= 1.48),
+    reticulate,
+    dplyr (>= 1.0.0),
+    tibble (>= 3.0.0),
+    stats
+Suggests:
+    BiocManager,
+    survival (>= 3.2.0),
+    survminer (>= 0.4.9),
+    ggplot2 (>= 3.4.0),
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+SystemRequirements: Python (>= 3.7) with tidepy installed (required only
+    for run_TIDE())
+URL: https://github.com/bozh2/LARItools
+BugReports: https://github.com/bozh2/LARItools/issues
