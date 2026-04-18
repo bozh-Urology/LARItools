@@ -59,7 +59,7 @@ install.packages(c("randomForestSRC", "reticulate", "dplyr", "tibble"))
 ```r
 if (!requireNamespace("remotes", quietly = TRUE))
   install.packages("remotes")
-remotes::install_github("bozh2/LARItools")
+remotes::install_github("bozh-Urology/LARItools")
 ```
 
 ### Step 4 — Python dependency (required only for `run_TIDE()`)
