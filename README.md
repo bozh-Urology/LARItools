@@ -1,7 +1,7 @@
 # LARItools <img src="man/figures/logo.png" align="right" height="139" alt="" />
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/bozh2/LARItools/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bozh2/LARItools/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/bozh-Urology/LARItools/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bozh-Urology/LARItools/actions/workflows/R-CMD-check.yaml)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0005--6298--1953-green.svg)](https://orcid.org/0009-0005-6298-1953)
@@ -109,6 +109,43 @@ head(result)
 | `model_path` | bundled RDS | Path to pre-trained RSF model |
 | `scale` | `TRUE` | Z-score normalisation per feature (within-dataset) |
 | `verbose` | `TRUE` | Print progress messages |
+
+#### CS1 / CS2 Subtype Classification
+
+The LARI score is a **continuous** prognostic index. For downstream
+subtype analyses, samples can be dichotomised into two molecular
+subtypes — **CS1** (low-risk) and **CS2** (high-risk) — using the
+within-cohort median as the default cut-point:
+
+- **CS1** — LARI score ≤ median (lower 50 % of the cohort)
+- **CS2** — LARI score > median (upper 50 % of the cohort)
+
+```r
+result <- calc_LARI(expr_matrix)
+
+# Default classification: median split
+result$subtype <- ifelse(result$LARI_score <= median(result$LARI_score),
+                         "CS1", "CS2")
+```
+
+> **Cross-platform note:** Because LARI scores are computed by
+> within-dataset z-score normalisation, the absolute score range may
+> differ across platforms (RNA-seq vs. microarray) or cohorts. The
+> median-split rule is therefore **cohort-relative** and remains valid
+> regardless of platform. If you wish to apply a fixed threshold — for
+> example, a cut-point derived from a reference training cohort — you
+> may substitute the median with any numeric value appropriate for your
+> dataset:
+>
+> ```r
+> # Custom threshold (e.g. derived from a reference cohort)
+> custom_threshold <- 0.50   # replace with your value
+> result$subtype <- ifelse(result$LARI_score <= custom_threshold,
+>                          "CS1", "CS2")
+> ```
+>
+> We recommend reporting the threshold and its derivation method in any
+> publication to ensure reproducibility.
 
 ---
 
@@ -294,4 +331,4 @@ Tianjin Medical University
 🔗 ORCID: [0009-0005-6298-1953](https://orcid.org/0009-0005-6298-1953)
 
 For bug reports and feature requests, please open an issue at:
-<https://github.com/bozh2/LARItools/issues>
+<https://github.com/bozh-Urology/LARItools/issues>
