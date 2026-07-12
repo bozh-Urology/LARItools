@@ -1,30 +1,24 @@
 Package: LARItools
-Title: Lactylation-Associated Risk Index (LARI) for Pan-Cancer
-Version: 1.2.0
+Title: Cohort-Level Transcriptomic Classification of a Lactylation-Program-Associated Tumor State
+Version: 1.2.1
 Authors@R:
     person("Zhihao", "Bo", , "bozhihao@tmu.edu.cn", role = c("aut", "cre"),
            comment = c(ORCID = "0009-0005-6298-1953"))
-Description: Computes the Lactylation-Associated Risk Index (LARI), a continuous
-    prognostic metric derived from a pre-trained multi-omics Random Survival Forest
-    (RSF) classifier integrating mRNA, lncRNA, and miRNA expression profiles. LARI
-    quantifies the transcriptional activity of the lactylation-associated
-    stromal-immune program at the individual sample level, with higher scores
-    reflecting greater enrichment of extracellular matrix remodeling, immune
-    suppression, and lactylation writer activity characteristic of the CS2 molecular
-    subtype. The index has been validated as an independent prognostic indicator
-    across eight external cohorts spanning six cancer types. Also provides
-    LacCore Signature Scores via ssGSEA (GSVA >= 1.48 new API) and TIDE
-    (Tumour Immune Dysfunction and Exclusion) scores via the Python tidepy
-    package. Accepts gene expression matrices from RNA-seq or microarray
-    platforms and returns per-sample scores suitable for survival analysis,
-    risk stratification, and downstream multi-omics integration. Version 1.2.0
-    introduces a locked classification threshold derived from the discovery
-    cohort OOB predictions, and a new classify_LARI() function for reproducible
-    CS1/CS2 subtyping across cohorts.
+Description: Provides cohort-level transcriptomic scoring and classification of a
+    lactylation-program-associated stromal-immune tumor state. The primary model is
+    a locked 10-gene mRNA random-forest classifier that returns the predicted
+    probability of the CS2-associated class and applies a fixed discovery-cohort
+    threshold to assign predicted CS1-like or CS2-like labels. Expression values are
+    centered within the submitted cohort and scaled by discovery-training standard
+    deviations, so the score is cohort-relative rather than single-sample
+    independent. The package also provides LacCore signature scoring by
+    single-sample gene set enrichment analysis and an optional interface to the
+    Python 'tidepy' package for exploratory TIDE analysis. Neither the LARI score nor
+    the LacCore score is a direct biochemical measurement of histone lactylation.
 License: GPL-2 | GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-biocViews: GeneExpression, Transcriptomics, GeneSetEnrichment, Survival
+biocViews: GeneExpression, Transcriptomics, GeneSetEnrichment
 Imports:
     randomForestSRC (>= 3.2.0),
     GSVA (>= 1.48),
@@ -39,8 +33,8 @@ Suggests:
     rmarkdown,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
-SystemRequirements: Python (>= 3.7) with tidepy installed (required only
-    for run_TIDE())
-URL: https://github.com/bozh2/LARItools
-BugReports: https://github.com/bozh2/LARItools/issues
+SystemRequirements: Python (>= 3.9, < 4) with tidepy installed (optional;
+    required only for run_TIDE())
+URL: https://github.com/bozh-Urology/LARItools
+BugReports: https://github.com/bozh-Urology/LARItools/issues
 Config/roxygen2/version: 8.0.0
