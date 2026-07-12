@@ -1,18 +1,27 @@
 # LARItools
 
-LARItools is an R package for transcriptomic analysis of the
-lactylation-associated stromal-immune program. It provides functions for LARI
-scoring and subtype classification, LacCore signature scoring, and TIDE
-analysis.
+LARItools is an R package for cohort-level transcriptomic characterization of a
+**lactylation-program-associated stromal-immune tumor state**.
+
+Its primary model is a locked 10-gene mRNA random-forest classifier trained to
+distinguish the CS1 and CS2 multi-omics consensus subtypes identified in the
+TCGA discovery cohort. `calc_LARI()` returns the predicted probability of the
+CS2-associated class, whereas `classify_LARI()` applies a discovery-cohort
+threshold to generate predicted **CS1-like** or **CS2-like** labels.
+
+The LARI score is a transcriptomic classifier output. It should not be
+interpreted as a direct biochemical measurement of histone lactylation, a
+standalone survival probability, or a substitute for direct multi-omics
+subtyping.
 
 ## Functions
 
 | Function | Purpose | Method |
 |---|---|---|
-| `calc_LARI()` | Calculate a continuous LARI score | Pre-trained random forest classifier |
-| `classify_LARI()` | Assign CS1 or CS2 using the locked discovery-cohort threshold | Fixed cutoff stored in the model bundle |
-| `calc_LacCore_score()` | Calculate a LacCore signature score | ssGSEA with GSVA |
-| `run_TIDE()` | Calculate TIDE immune dysfunction and exclusion scores | Python `tidepy` through `reticulate` |
+| `calc_LARI()` | Estimate a continuous score for the CS2-associated class | Locked 10-gene mRNA random-forest classifier |
+| `classify_LARI()` | Predict a CS1-like or CS2-like class | Fixed discovery-cohort cutoff stored in the model bundle |
+| `calc_LacCore_score()` | Calculate a cohort-standardized LacCore signature score | ssGSEA implemented with GSVA |
+| `run_TIDE()` | Calculate exploratory TIDE dysfunction and exclusion metrics | Python `tidepy` through `reticulate` |
 
 ## Installation
 
@@ -30,7 +39,7 @@ install.packages(c("randomForestSRC", "reticulate", "remotes"))
 Install LARItools from GitHub:
 
 ```r
-remotes::install_github("bozh2/LARItools")
+remotes::install_github("bozh-Urology/LARItools")
 ```
 
 Alternatively, install a local source package:
@@ -49,11 +58,14 @@ TIDE analysis additionally requires Python and `tidepy`:
 python -m pip install tidepy
 ```
 
-## Input Format
+## Input format
 
-Expression matrices must have gene symbols as row names and sample identifiers
-as column names. For RNA-seq data, use `log2(TPM + 1)` or an equivalent
-log-scale expression measure.
+Expression matrices must contain gene symbols as row names and sample
+identifiers as column names.
+
+For RNA-seq data, use `log2(TPM + 1)` or another comparable log-scale
+expression measure. For microarray data, use an appropriately normalized
+log-scale expression matrix.
 
 ```text
               Sample_1  Sample_2  Sample_3
@@ -63,61 +75,90 @@ COL3A1           6.18      7.01      5.92
 ...
 ```
 
-LARI normalization uses gene means calculated from the submitted cohort. A
-single sample is therefore not a valid input for cohort-level LARI analysis.
-Samples that will be compared should be processed together using the same
-expression unit and transformation.
+Samples intended for comparison should be processed together using the same
+expression unit, normalization procedure, and transformation.
 
-## LARI Score
+## LARI score
 
-`calc_LARI()` uses the following 10 genes:
+`calc_LARI()` uses the following 10 mRNA features:
 
 ```text
 COL5A1, GLT8D2, COL3A1, COL1A2, COL1A1,
 PDGFRB, OLFML1, FAP, TIMP2, EMILIN1
 ```
 
-For each gene, expression is centered using the mean of the submitted cohort
-and divided by the fixed standard deviation estimated in the discovery
+For each model gene, expression is centered using the mean of the submitted
+cohort and divided by the fixed standard deviation estimated in the discovery
 training set:
 
 ```text
-z = (expression - cohort gene mean) / training-set gene SD
+z = (expression - submitted-cohort gene mean) / discovery-training gene SD
 ```
 
-The resulting matrix is passed to the bundled random forest model. The class
-`"1"` prediction probability is returned as `LARI_score`.
+The scaled expression matrix is then passed to the bundled random-forest
+classifier. The predicted probability of class `"1"` is returned as
+`LARI_score`.
 
 ```r
 library(LARItools)
 
 expr_log2 <- log2(tpm_matrix + 1)
+
 lari_scores <- calc_LARI(expr_log2)
 head(lari_scores)
 ```
 
-The required model, gene list, training-set scaling parameters, and locked
-threshold are stored in:
+The model, required gene list, discovery-training scaling parameters, and
+locked classification threshold are stored in:
 
 ```text
 inst/extdata/lari_model_bundle_v1.2.rds
 ```
 
+### Important cohort-level limitation
+
+Because centering is performed using the mean of the submitted cohort, the LARI
+score is **cohort-relative**. The same sample can receive a different score if
+it is analyzed together with a substantially different sample set.
+
+Therefore:
+
+- single-sample input is not valid for LARI analysis;
+- unrelated studies should not be pooled solely for normalization;
+- samples being compared should be processed as one analytically coherent
+  cohort;
+- the locked cutoff removes outcome-based threshold recalibration, but it does
+  not make the preprocessing fully single-sample independent.
+
+### Missing model genes
+
 If one or more model genes are absent, `calc_LARI()` issues a warning and
-imputes those features with zero. Results from incomplete gene panels should
-be interpreted cautiously.
+imputes the corresponding standardized feature values with zero. Results from
+incomplete gene panels should be interpreted cautiously and the missing genes
+should be reported.
 
-## Locked CS1/CS2 Classification
+## Locked CS1-like/CS2-like classification
 
-The default classification threshold is:
+The default locked threshold is stored at full precision in the model bundle
+and is approximately:
+
+```text
+0.3181
+```
+
+The underlying full-precision value is:
 
 ```text
 0.3180523827398828
 ```
 
-This value is the median out-of-bag predicted probability for class `"1"`
-across 6,798 samples in the TCGA pan-cancer discovery cohort. It is stored in
-the model bundle and applied without recalibration to validation cohorts.
+For exact classification, LARI scores should be retained at full numerical
+precision internally and rounded only for display.
+
+This threshold was defined as the median out-of-bag predicted probability for
+class `"1"` across 6,798 samples in the TCGA discovery training cohort. It is
+applied to external cohorts without deriving a new cutoff from their outcomes
+or subtype distribution.
 
 ```r
 lari_result <- classify_LARI(lari_scores)
@@ -127,28 +168,39 @@ table(lari_result$LARI_subtype)
 Classification follows these rules:
 
 ```text
-LARI_score <= 0.3180523827398828  -> CS1
-LARI_score >  0.3180523827398828  -> CS2
+LARI_score <= 0.3180523827398828  -> predicted CS1-like
+LARI_score >  0.3180523827398828  -> predicted CS2-like
 ```
 
-CS1 represents lower stromal/interstitial activity. CS2 represents higher
+The labels produced in external cohorts are classifier-predicted analogues of
+the discovery multi-omics consensus subtypes. They are not de novo MOVICS
+consensus assignments.
+
+The predicted CS1-like class generally represents lower stromal/interstitial
+activity, whereas the predicted CS2-like class represents higher
 stromal/interstitial activity and an immune-excluded phenotype.
 
-For independent validation, use `classify_LARI(lari_scores)` without supplying
-a cohort-derived cutoff. The optional `cutoff` argument is provided for
-explicit sensitivity analyses and should be reported whenever it is used.
+For independent validation, use:
 
-## LacCore Signature Score
+```r
+classify_LARI(lari_scores)
+```
+
+without supplying a cohort-derived cutoff. The optional `cutoff` argument is
+intended only for explicitly labeled sensitivity analyses and should always be
+reported when used.
+
+## LacCore signature score
 
 `calc_LacCore_score()` calculates an ssGSEA score for the six-gene LacCore
-signature and standardizes the score across samples.
+signature and then standardizes the score across the submitted samples.
 
 ```r
 lacore_result <- calc_LacCore_score(expr_log2)
 head(lacore_result)
 ```
 
-The default signature is:
+The default LacCore signature is:
 
 ```text
 CREBBP, EP300, LDHA, PKM, SLC16A1, SLC16A3
@@ -157,19 +209,51 @@ CREBBP, EP300, LDHA, PKM, SLC16A1, SLC16A3
 The exported objects `LACCORE_GENES` and `LRG_PANEL` provide the LacCore genes
 and the broader lactylation-related gene panel.
 
-## TIDE Analysis
+### Important interpretation note
+
+Because the ssGSEA result is standardized across the submitted samples, the
+reported LacCore score is also cohort-relative. A single-sample input is not
+meaningful for the standardized score.
+
+The LacCore score is a transcriptomic surrogate of a lactylation-related
+program. It is not a direct measurement of histone lactylation abundance.
+
+## TIDE analysis
 
 `run_TIDE()` calls the Python `tidepy` package through `reticulate`.
 
+Use an `input_type` that matches the actual expression matrix. Do not label TPM
+values as raw read counts.
+
+Example for log2-transformed expression:
+
 ```r
 tide_result <- run_TIDE(
-  expr_matrix = tpm_matrix,
+  expr_matrix = expr_log2,
   cancer = "LUAD",
-  input_type = "raw_counts"
+  input_type = "log2"
 )
 ```
 
-Supported TIDE cancer mappings are:
+Example for already centered log2 expression:
+
+```r
+tide_result <- run_TIDE(
+  expr_matrix = expr_log2_centered,
+  cancer = "LUAD",
+  input_type = "log2_centered"
+)
+```
+
+Supported `input_type` values are:
+
+```text
+"auto", "raw_counts", "log2", "log2_centered"
+```
+
+A Python interpreter containing `tidepy` can be selected with `python_path`.
+
+Supported cancer mappings are:
 
 | Input | TIDE parameter |
 |---|---|
@@ -177,36 +261,67 @@ Supported TIDE cancer mappings are:
 | `LUAD`, `LUSC` | `NSCLC` |
 | Other values | `Other` |
 
-`input_type` can be `"auto"`, `"raw_counts"`, `"log2"`, or
-`"log2_centered"`. A Python interpreter containing `tidepy` can be selected
-with `python_path`.
+### Important TIDE limitation
 
-## Model Version
+TIDE was originally developed and validated primarily in melanoma and NSCLC
+cohorts. Results for other cancer types or treatment settings should be
+interpreted as exploratory computational estimates rather than validated
+clinical predictions.
+
+## Model version
 
 Version 1.2.0 introduced:
 
-- cohort mean centering with fixed discovery-set standard deviations;
-- the locked discovery-cohort OOB threshold;
-- `classify_LARI()` for reproducible CS1/CS2 assignment;
-- a single model bundle containing the model and preprocessing metadata.
+- cohort mean centering with fixed discovery-training standard deviations;
+- a locked discovery-cohort out-of-bag threshold;
+- `classify_LARI()` for reproducible external-cohort classification;
+- a single model bundle containing the classifier and preprocessing metadata.
+
+For reproducible analyses, report:
+
+- the LARItools version;
+- the model-bundle version;
+- the expression unit and transformation;
+- the number of submitted samples;
+- any missing model genes;
+- whether the default locked threshold or a custom cutoff was used.
+
+## Interpretation summary
+
+LARItools should be interpreted as follows:
+
+- `LARI_score` is the predicted probability of the CS2-associated class from a
+  locked 10-gene mRNA classifier;
+- predicted CS1-like/CS2-like labels are mRNA-based approximations of the
+  discovery multi-omics consensus subtypes;
+- LARI and LacCore scores are cohort-relative under the current preprocessing
+  implementation;
+- neither score directly measures histone lactylation;
+- TIDE results outside melanoma and NSCLC should be treated as exploratory.
 
 ## Citation
 
-If you use LARItools, cite the accompanying LARI study and the relevant method
-papers:
+The primary study associated with this package is:
 
-- Hanzelmann S, Castelo R, Guinney J. GSVA: gene set variation analysis for
-  microarray and RNA-seq data. *BMC Bioinformatics*. 2013;14:7.
-  <https://doi.org/10.1186/1471-2105-14-7>
+> Bo Z, Zhang S, Zheng Z, et al.  
+> **Pan-Cancer Multi-Omics Machine Learning Delineates a
+> Lactylation-Program-Associated Immune-Excluded Tumor State with Exploratory
+> Proteomic Corroboration and Proof-of-Concept Functional Evaluation.**  
+> Manuscript under revision.
+
+Please also cite the relevant method papers:
+
+- Hänzelmann S, Castelo R, Guinney J. GSVA: gene set variation analysis for
+  microarray and RNA-seq data. *BMC Bioinformatics*. 2013;14:7.  
+  https://doi.org/10.1186/1471-2105-14-7
+
 - Barbie DA, et al. Systematic RNA interference reveals that oncogenic
-  KRAS-driven cancers require TBK1. *Nature*. 2009;462:108-112.
-  <https://doi.org/10.1038/nature08460>
-- Jiang P, et al. Signatures of T cell dysfunction and exclusion predict
-  cancer immunotherapy response. *Nature Medicine*. 2018;24:1550-1558.
-  <https://doi.org/10.1038/s41591-018-0136-1>
+  KRAS-driven cancers require TBK1. *Nature*. 2009;462:108-112.  
+  https://doi.org/10.1038/nature08460
 
-The citation for the primary LARI study will be updated when the final
-bibliographic record is available.
+- Jiang P, et al. Signatures of T cell dysfunction and exclusion predict
+  cancer immunotherapy response. *Nature Medicine*. 2018;24:1550-1558.  
+  https://doi.org/10.1038/s41591-018-0136-1
 
 ## License
 
@@ -219,4 +334,4 @@ Tianjin Medical University
 Email: bozhihao@tmu.edu.cn  
 ORCID: [0009-0005-6298-1953](https://orcid.org/0009-0005-6298-1953)
 
-Issues: <https://github.com/bozh2/LARItools/issues>
+Issues: <https://github.com/bozh-Urology/LARItools/issues>
