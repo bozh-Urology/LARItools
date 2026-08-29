@@ -303,11 +303,9 @@ LARItools should be interpreted as follows:
 
 The primary study associated with this package is:
 
-> Bo Z, Zhang S, Zheng Z, et al.  
-> **Pan-Cancer Multi-Omics Machine Learning Delineates a
-> Lactylation-Program-Associated Immune-Excluded Tumor State with Exploratory
-> Proteomic Corroboration and Proof-of-Concept Functional Evaluation.**  
-> Manuscript under revision.
+> Bo Z, Zhang S, Zheng Z, Ma J, Feng Y, Li J, Liu Y, Fu Z, Xing H, Yu S, Guo S, Si X, Wang J, Wang R, Wang R, Zhang X, Yue D, Wang Y
+> **Pan-cancer multi-omics machine learning defines a lactylation-associated immune-excluded tumor state with proteomic and experimental corroboration**  
+> omput Biol Chem. 2026 Jul 31;125:109294. doi: 10.1016/j.compbiolchem.2026.109294. PMID: 42556016.
 
 Please also cite the relevant method papers:
 
